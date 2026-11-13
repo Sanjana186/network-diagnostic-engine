@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Project Record — Kanban Board & Mini-Sprint | Network Diagnostic Engine</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); padding: 24px; font-size: 13px; line-height: 1.5; }
+    .container { max-width: 1100px; margin: 0 auto; background: var(--card-bg); padding: 32px; border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+    
+    /* Header */
+    .header { border-bottom: 2px solid var(--primary); padding-bottom: 16px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: flex-start; }
+    .title-block h1 { font-size: 20px; font-weight: 700; color: #1e293b; margin-bottom: 4px; }
+    .title-block h2 { font-size: 14px; font-weight: 500; color: var(--primary); margin-bottom: 6px; }
+    .meta-grid { display: flex; gap: 16px; font-size: 12px; color: var(--muted); }
+    .meta-item strong { color: var(--text); }
+    .btn-print { background: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+    .btn-print:hover { background: #1d4ed8; }
+
+    /* Section Headings */
+    h3 { font-size: 15px; font-weight: 700; margin: 24px 0 12px; color: #1e293b; border-left: 4px solid var(--primary); padding-left: 8px; }
+
+    /* Kanban Board */
+    .kanban-board { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 28px; }
+    .kanban-col { background: #f1f5f9; border-radius: 6px; padding: 10px; border: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
+    .col-header { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #cbd5e1; padding-bottom: 6px; }
+    .col-header .badge { background: #cbd5e1; color: #334155; padding: 2px 6px; border-radius: 10px; font-size: 10px; }
+    
+    .card { background: white; border: 1px solid #e2e8f0; border-radius: 5px; padding: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    .card-id { font-family: monospace; font-weight: 700; font-size: 11px; }
+    .sp-badge { font-size: 10px; font-weight: 600; padding: 2px 5px; border-radius: 4px; background: #e0f2fe; color: #0284c7; }
+    .card-title { font-size: 12px; font-weight: 600; color: #1e293b; margin-bottom: 6px; }
+    .card-footer { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); border-top: 1px dashed #f1f5f9; padding-top: 6px; margin-top: 4px; }
+    .card-footer .assignee { font-weight: 600; color: #334155; }
+
+    /* Card Status Styling */
+    .col-in-progress { background: #fefce8; border-color: #fef08a; }
+    .col-in-progress .card { border-left: 3px solid #eab308; }
+    .col-review { background: #eef2ff; border-color: #c7d2fe; }
+    .col-review .card { border-left: 3px solid #6366f1; }
+    .col-done { background: #f0fdf4; border-color: #bbf7d0; }
+    .col-done .card { border-left: 3px solid #22c55e; }
+
+    /* Tables */
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; margin-bottom: 20px; font-size: 12px; }
+    th, td { border: 1px solid var(--border); padding: 8px 10px; text-align: left; }
+    th { background: #f8fafc; font-weight: 600; color: #334155; }
+    tr:nth-child(even) { background: #fafafa; }
+    .badge-status { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+    .status-done { background: #dcfce7; color: #15803d; }
+    .status-progress { background: #fef9c3; color: #a16207; }
+    .status-review { background: #e0e7ff; color: #4338ca; }
+    .status-ready { background: #e0f2fe; color: #0369a1; }
+
+    /* Daily Standup Grid */
+    .standup-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 20px; }
+    .standup-day { background: #f8fafc; border: 1px solid var(--border); border-radius: 6px; padding: 10px; font-size: 11px; }
+    .day-title { font-weight: 700; color: var(--primary); font-size: 12px; margin-bottom: 6px; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
+    .dev-block { margin-top: 6px; }
+    .dev-name { font-weight: 700; color: #1e293b; font-size: 11px; }
+    .dev-text { color: #475569; margin-top: 2px; }
+
+    @media print {
+      body { padding: 0; background: white; }
+      .container { border: none; box-shadow: none; padding: 0; max-width: 100%; }
+      .btn-print { display: none; }
+      .kanban-col { break-inside: avoid; }
+      table { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- Record Header -->
+  <div class="header">
+    <div class="title-block">
+      <h1>PROJECT RECORD: NETWORK DIAGNOSTIC ENGINE</h1>
+      <h2>Agile Task Management: Kanban Board & Mini-Sprint Execution</h2>
+      <div class="meta-grid">
+        <div class="meta-item">Course: <strong>React JS (5th Semester)</strong></div>
+        <div class="meta-item">Team Size: <strong>2 Members</strong></div>
+        <div class="meta-item">Sprint Duration: <strong>5 Days (Mini-Sprint 1)</strong></div>
+        <div class="meta-item">Total Committed: <strong>34 Story Points (51h)</strong></div>
+      </div>
+    </div>
+    <button class="btn-print" onclick="window.print()">🖨️ Print / Save to PDF</button>
+  </div>
+
+  <!-- Section 1: Kanban Board -->
+  <h3>1. Current Sprint Kanban Board</h3>
+  <div class="kanban-board">
+    
+    <!-- Backlog -->
+    <div class="kanban-col">
+      <div class="col-header">
+        <span>Backlog (V2)</span>
+        <span class="badge">3</span>
+      </div>
+      <div class="card">
+        <div class="card-top"><span class="card-id" style="color: #64748b;">NDE-10</span><span class="sp-badge">3 SP</span></div>
+        <div class="card-title">LocalStorage History</div>
+        <div class="card-footer"><span>V2 Storage</span><span class="assignee">Dev A</span></div>
+      </div>
+      <div class="card">
+        <div class="card-top"><span class="card-id" style="color: #64748b;">NDE-11</span><span class="sp-badge">5 SP</span></div>
+        <div class="card-title">3-Run Average Testing</div>
+        <div class="card-footer"><span>V2 Analysis</span><span class="assignee">Dev B</span></div>
+      </div>
+      <div class="card">
+        <div class="card-top"><span class="card-id" style="color: #64748b;">NDE-12</span><span class="sp-badge">3 SP</span></div>
+        <div class="card-title">PDF Report Export</div>
+        <div class="card-footer"><span>V2 Export</span><span class="assignee">Dev A</span></div>
+      </div>
+    </div>
+
+    <!-- Ready / To Do -->
+    <div class="kanban-col">
+      <div class="col-header">
+        <span>Ready (WIP: 4)</span>
+        <span class="badge">3</span>
+      </div>
+      <div class="card">
+        <div class="card-top"><span class="card-id" style="color: #0284c7;">NDE-06</span><span class="sp-badge">5 SP</span></div>
+        <div class="card-title">HTTP & TTFB Timer</div>
+        <div class="card-footer"><span>6 hrs</span><span class="assignee">Dev B</span></div>
+      </div>
+      <div class="card">
+        <div class="card-top"><span class="card-id" style="color: #0284c7;">NDE-08</span><span class="sp-badge">5 SP</span></div>
+        <div class="card-title">Recharts Waterfall Chart</div>
+        <div class="card-footer"><span>7 hrs</span><span class="assignee">Dev A</span></div>
+      </div>
+      <div class="card">
+        <div class="card-top"><span class="card-id" style="color: #0284c7;">NDE-07</span><span class="sp-badge">5 SP</span></div>
+        <div class="card-title">Rule Bottleneck Engine</div>
+        <div class="card-footer"><span>6 hrs</span><span class="assignee">Dev B</span></div>
+      </div>
+    </div>
+
+    <!-- In Progress -->
+    <div class="kanban-col col-in-progress">
+      <div class="col-header">
+        <span style="color: #a16207;">In Dev (WIP: 4)</span>
+        <span class="badge" style="background:#fef08a; color:#854d0e;">2</span>
+      </div>
+      <div class="card">
+        <div class="card-top"><span class="card-id" style="color: #ca8a04;">NDE-04</span><span class="sp-badge" style="background:#fef08a; color:#854d0e;">5 SP</span></div>
+        <div class="card-title">TCP & TLS Socket Timers</div>
+        <div class="card-footer"><span>net & tls</span><span class="assignee">Dev B</span></div>
+      </div>
+      <div class="card">
+        <div class="card-top"><span class="card-id" style="color: #ca8a04;">NDE-05</span><span class="sp-badge" style="background:#fef08a; color:#854d0e;">3 SP</span></div>
+        <div class="card-title">React Dashboard & Input</div>
+        <div class="card-footer"><span>Tailwind</span><span class="assignee">Dev A</span></div>
+      </div>
+    </div>
+
+    <!-- Review / Testing -->
+    <div class="kanban-col col-review">
+      <div class="col-header">
+        <span style="color: #4338ca;">Review (WIP: 3)</span>
+        <span class="badge" style="background:#c7d2fe; color:#312e81;">2</span>
+      </div>
+      <div class="card">
+        <div class="card-top"><span class="card-id" style="color: #4f46e5;">NDE-02</span><span class="sp-badge" style="background:#e0e7ff; color:#4338ca;">3 SP</span></div>
+        <div class="card-title">SSRF Filter & URL Parser</div>
+        <div class="card-footer"><span style="color:#16a34a; font-weight:600;">PR #2 Open</span><span class="assignee">Dev B</span></div>
+      </div>
+      <div class="card">
+        <div class="card-top"><span class="card-id" style="color: #4f46e5;">NDE-03</span><span class="sp-badge" style="background:#e0e7ff; color:#4338ca;">3 SP</span></div>
+        <div class="card-title">DNS Resolution Timer</div>
+        <div class="card-footer"><span style="color:#16a34a; font-weight:600;">PR #3 Open</span><span class="assignee">Dev B</span></div>
+      </div>
+    </div>
+
+    <!-- Done -->
+    <div class="kanban-col col-done">
+      <div class="col-header">
+        <span style="color: #15803d;">Done</span>
+        <span class="badge" style="background:#bbf7d0; color:#14532d;">1</span>
+      </div>
+      <div class="card">
+        <div class="card-top"><span class="card-id" style="color: #16a34a;">NDE-01</span><span class="sp-badge" style="background:#dcfce7; color:#15803d;">2 SP</span></div>
+        <div class="card-title">Project Setup & Monorepo</div>
+        <div class="card-footer"><span style="color:#16a34a; font-weight:600;">Merged</span><span class="assignee">Dev A+B</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Section 2: Task Estimation Matrix -->
+  <h3>2. Task Estimation Matrix (Fibonacci Story Points & Hours)</h3>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 70px;">Task ID</th>
+        <th>Task Description & Scope</th>
+        <th>Domain</th>
+        <th>Owner</th>
+        <th style="text-align: center; width: 60px;">SP</th>
+        <th style="text-align: center; width: 70px;">Est. Time</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>NDE-01</strong></td>
+        <td>Project Scaffolding: Vite + React, Tailwind CSS, Express backend boilerplate</td>
+        <td>Infra</td>
+        <td>Dev A + Dev B</td>
+        <td style="text-align: center;"><strong>2</strong></td>
+        <td style="text-align: center;">3 hrs</td>
+        <td><span class="badge-status status-done">Done</span></td>
+      </tr>
+      <tr>
+        <td><strong>NDE-02</strong></td>
+        <td>SSRF Defense & URL Validation: Block RFC-1918, localhost & cloud metadata</td>
+        <td>Security</td>
+        <td>Dev B</td>
+        <td style="text-align: center;"><strong>3</strong></td>
+        <td style="text-align: center;">4 hrs</td>
+        <td><span class="badge-status status-review">In Review</span></td>
+      </tr>
+      <tr>
+        <td><strong>NDE-03</strong></td>
+        <td>DNS Resolution Module: High-resolution timing via Node.js dns.lookup</td>
+        <td>Backend</td>
+        <td>Dev B</td>
+        <td style="text-align: center;"><strong>3</strong></td>
+        <td style="text-align: center;">4 hrs</td>
+        <td><span class="badge-status status-review">In Review</span></td>
+      </tr>
+      <tr>
+        <td><strong>NDE-04</strong></td>
+        <td>TCP Connect & TLS Handshake: Socket level connection & cipher negotiation</td>
+        <td>Backend</td>
+        <td>Dev B</td>
+        <td style="text-align: center;"><strong>5</strong></td>
+        <td style="text-align: center;">7 hrs</td>
+        <td><span class="badge-status status-progress">In Progress</span></td>
+      </tr>
+      <tr>
+        <td><strong>NDE-05</strong></td>
+        <td>React Dashboard Shell: Responsive navbar, URL input box, protocol switch</td>
+        <td>Frontend</td>
+        <td>Dev A</td>
+        <td style="text-align: center;"><strong>3</strong></td>
+        <td style="text-align: center;">4 hrs</td>
+        <td><span class="badge-status status-progress">In Progress</span></td>
+      </tr>
+      <tr>
+        <td><strong>NDE-06</strong></td>
+        <td>HTTP & TTFB Timing: Request dispatch, TTFB detection & throughput calculation</td>
+        <td>Backend</td>
+        <td>Dev B</td>
+        <td style="text-align: center;"><strong>5</strong></td>
+        <td style="text-align: center;">6 hrs</td>
+        <td><span class="badge-status status-ready">Ready</span></td>
+      </tr>
+      <tr>
+        <td><strong>NDE-07</strong></td>
+        <td>Rule-Based Bottleneck Detection: Heuristic logic flagging slowest phase</td>
+        <td>Logic</td>
+        <td>Dev B + Dev A</td>
+        <td style="text-align: center;"><strong>5</strong></td>
+        <td style="text-align: center;">6 hrs</td>
+        <td><span class="badge-status status-ready">Ready</span></td>
+      </tr>
+      <tr>
+        <td><strong>NDE-08</strong></td>
+        <td>Recharts Waterfall Visualization: Visual horizontal stacked latency timeline</td>
+        <td>Frontend</td>
+        <td>Dev A</td>
+        <td style="text-align: center;"><strong>5</strong></td>
+        <td style="text-align: center;">7 hrs</td>
+        <td><span class="badge-status status-ready">Ready</span></td>
+      </tr>
+      <tr>
+        <td><strong>NDE-09</strong></td>
+        <td>Diagnostic Badges & Recommendations: Explanatory diagnosis display</td>
+        <td>Frontend</td>
+        <td>Dev A</td>
+        <td style="text-align: center;"><strong>3</strong></td>
+        <td style="text-align: center;">4 hrs</td>
+        <td><span class="badge-status status-ready">Ready</span></td>
+      </tr>
+      <tr>
+        <td><strong>NDE-13</strong></td>
+        <td>End-to-End Integration & Error Handling: Timeouts, 4xx/5xx responses</td>
+        <td>Fullstack</td>
+        <td>Dev A + Dev B</td>
+        <td style="text-align: center;"><strong>5</strong></td>
+        <td style="text-align: center;">6 hrs</td>
+        <td><span class="badge-status status-ready">Ready</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Section 3: Daily Scrum Updates -->
+  <h3>3. 5-Day Mini-Sprint Daily Updates (Standup Record)</h3>
+  <div class="standup-grid">
+    
+    <div class="standup-day">
+      <div class="day-title">Day 1: Scaffold</div>
+      <div class="dev-block">
+        <span class="dev-name">Dev A (UI):</span>
+        <p class="dev-text">Configured Vite + React + Tailwind CSS boilerplate. Setup folder layout.</p>
+      </div>
+      <div class="dev-block">
+        <span class="dev-name">Dev B (Backend):</span>
+        <p class="dev-text">Created Express API skeleton. Authored SSRF IP blacklist module.</p>
+      </div>
+    </div>
+
+    <div class="standup-day">
+      <div class="day-title">Day 2: Sockets & Form</div>
+      <div class="dev-block">
+        <span class="dev-name">Dev A (UI):</span>
+        <p class="dev-text">Built URL input form with protocol toggle and input validation regex.</p>
+      </div>
+      <div class="dev-block">
+        <span class="dev-name">Dev B (Backend):</span>
+        <p class="dev-text">Implemented DNS timer (hrtime) and began raw TCP net.Socket connection timer.</p>
+      </div>
+    </div>
+
+    <div class="standup-day">
+      <div class="day-title">Day 3: HTTP & Chart</div>
+      <div class="dev-block">
+        <span class="dev-name">Dev A (UI):</span>
+        <p class="dev-text">Integrated Recharts library. Built horizontal waterfall chart prototype.</p>
+      </div>
+      <div class="dev-block">
+        <span class="dev-name">Dev B (Backend):</span>
+        <p class="dev-text">Completed TLS handshake timer and HTTP TTFB & data throughput calculation.</p>
+      </div>
+    </div>
+
+    <div class="standup-day">
+      <div class="day-title">Day 4: Rules & Alert</div>
+      <div class="dev-block">
+        <span class="dev-name">Dev A (UI):</span>
+        <p class="dev-text">Styled diagnostic summary cards, bottleneck highlight badges, and causes.</p>
+      </div>
+      <div class="dev-block">
+        <span class="dev-name">Dev B (Backend):</span>
+        <p class="dev-text">Implemented heuristic bottleneck rules (DNS, TCP, TLS, TTFB thresholds).</p>
+      </div>
+    </div>
+
+    <div class="standup-day">
+      <div class="day-title">Day 5: Integration</div>
+      <div class="dev-block">
+        <span class="dev-name">Dev A (UI):</span>
+        <p class="dev-text">Connected React to backend /api/diagnose. Added timeout & error toasts.</p>
+      </div>
+      <div class="dev-block">
+        <span class="dev-name">Dev B (Backend):</span>
+        <p class="dev-text">Added 10s request abort guards. Verified against live test domains. Sprint Demo.</p>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="font-size: 11px; color: var(--muted); text-align: center; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 8px;">
+    Course Project Record — Network Diagnostic Engine © 2026
+  </div>
+</div>
+
+</body>
+</html>
+
