@@ -1,0 +1,41 @@
+# Dependencies (never commit packages)
+node_modules/
+**/node_modules/
+
+# Production Build Output
+dist/
+**/dist/
+build/
+**/build/
+
+# Environment Variables & Secrets
+.env
+.env*.local
+**/.env
+**/.env*.local
+!.env.example
+!**/.env.example
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+*.log
+
+# Editor & OS Metadata
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Temporary / Cache Files
+.eslintcache
+.stylelintcache
+*.tsbuildinfo
