@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { runDiagnostics } from './controllers/diagnosticController.js';
 
 dotenv.config();
 
@@ -26,6 +27,9 @@ app.get('/api/health', (req, res) => {
     service: 'Network Diagnostic Engine API'
   });
 });
+
+// Diagnostic endpoint
+app.post('/api/diagnose', runDiagnostics);
 
 app.listen(PORT, () => {
   console.log(`Diagnostic backend server running on http://localhost:${PORT}`);
