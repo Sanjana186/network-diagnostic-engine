@@ -13,8 +13,13 @@ import { now, diffMs } from '../utils/timer.js';
  * - Data Transfer
  * - Total Duration & Throughput
  * 
+ * Supports pre-validated IP injection to prevent DNS Rebinding (TOCTOU) attacks
+ * while maintaining strict TLS SNI and certificate validation.
+ * 
  * @param {string} targetUrl - URL to probe (must start with http:// or https://)
  * @param {object} [options]
+ * @param {string} [options.validatedIp] - Pre-validated safe destination IP from SSRF middleware
+ * @param {number} [options.dnsDuration] - Pre-measured DNS resolution duration in ms
  * @param {number} [options.timeout=10000] - Total timeout in milliseconds
  * @returns {Promise<object>} Probe results matching the shared API contract
  */
@@ -37,18 +42,24 @@ export async function probeUrl(targetUrl, options = {}) {
   const port = parsedUrl.port ? parseInt(parsedUrl.port, 10) : (isHttps ? 443 : 80);
   const hostname = parsedUrl.hostname;
 
-  // 2. Measure DNS Lookup
-  const dnsStart = now();
-  let resolvedIp;
-  try {
-    const lookupResult = await dns.lookup(hostname);
-    resolvedIp = lookupResult.address;
-  } catch (dnsErr) {
-    throw new Error(`DNS Resolution failed for "${hostname}": ${dnsErr.code || dnsErr.message}`);
-  }
-  const dnsDuration = diffMs(dnsStart);
+  // 2. Resolve DNS (or reuse pre-validated IP from SSRF validator)
+  let resolvedIp = options.validatedIp;
+  let dnsDuration = options.dnsDuration;
 
-  // 3. Measure TCP, TLS, TTFB, and Data Transfer using http/https request lifecycle hooks
+  if (!resolvedIp) {
+    const dnsStart = now();
+    try {
+      const lookupResult = await dns.lookup(hostname);
+      resolvedIp = lookupResult.address;
+      dnsDuration = diffMs(dnsStart);
+    } catch (dnsErr) {
+      throw new Error(`DNS Resolution failed for "${hostname}": ${dnsErr.code || dnsErr.message}`);
+    }
+  } else if (typeof dnsDuration !== 'number') {
+    dnsDuration = 0;
+  }
+
+  // 3. Measure TCP, TLS, TTFB, and Data Transfer
   return new Promise((resolve, reject) => {
     let tcpStart = 0n;
     let tcpDuration = 0;
@@ -75,6 +86,15 @@ export async function probeUrl(targetUrl, options = {}) {
         'Accept': '*/*',
         'Connection': 'close', // Do not reuse socket; we want a fresh connection measurement
       },
+      // Pin socket connection to the pre-validated IP, eliminating DNS rebinding (TOCTOU)
+      lookup: (targetHost, lookupOpts, callback) => {
+        const family = resolvedIp.includes(':') ? 6 : 4;
+        if (lookupOpts && lookupOpts.all) {
+          callback(null, [{ address: resolvedIp, family }]);
+        } else {
+          callback(null, resolvedIp, family);
+        }
+      },
     };
 
     const client = isHttps ? https : http;
@@ -98,6 +118,7 @@ export async function probeUrl(targetUrl, options = {}) {
       });
 
       // If HTTPS, TLS handshake completes on 'secureConnect'
+      // Note: servername (SNI) and certificate validation automatically use parsedUrl.hostname
       if (isHttps) {
         socket.on('secureConnect', () => {
           tlsDuration = diffMs(tlsStart);

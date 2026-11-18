@@ -17,8 +17,15 @@ export async function runDiagnostics(req, res) {
 
     const trimmedUrl = url.trim();
 
+    // If SSRF middleware pre-validated the IP and measured DNS lookup, pass them in
+    const probeOptions = {};
+    if (req.validatedTarget) {
+      probeOptions.validatedIp = req.validatedTarget.ip;
+      probeOptions.dnsDuration = req.validatedTarget.dnsDuration;
+    }
+
     // Execute low-level network probe
-    const probeResult = await probeUrl(trimmedUrl);
+    const probeResult = await probeUrl(trimmedUrl, probeOptions);
 
     // Compute basic bottleneck analysis fallback until Engineer 2 plugs in the full heuristic engine
     const timings = probeResult.timings;
@@ -30,7 +37,6 @@ export async function runDiagnostics(req, res) {
       { name: 'Content Download', key: 'dataTransfer', time: timings.dataTransfer },
     ];
 
-    // Find stage with maximum latency
     const slowest = stageEntries.reduce((max, curr) => curr.time > max.time ? curr : max, stageEntries[0]);
     const percentageOfTotal = timings.totalDuration > 0 
       ? Number(((slowest.time / timings.totalDuration) * 100).toFixed(1))
