@@ -104,9 +104,6 @@ function App() {
               <span className="font-mono text-xs font-bold tracking-wider uppercase text-white">
                 NETWORK DIAGNOSTIC ENGINE
               </span>
-              <span className="text-[10px] font-mono text-slate-400 hidden sm:inline">
-                // FULL_STACK_V2
-              </span>
             </div>
           </div>
 
@@ -413,8 +410,8 @@ function App() {
       {/* Technical Footer */}
       <footer className="border-t border-white/10 bg-[#07080c] py-4 text-[11px] font-mono text-slate-400">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <div>REACT JS CAPSTONE // NETWORK DIAGNOSTIC ENGINE</div>
-          <div className="text-slate-400">VERSION 2.0.0 // REPEATED TESTING &amp; JITTER FILTERING ACTIVE</div>
+          <div>NETWORK DIAGNOSTIC ENGINE</div>
+          <div className="text-slate-400">HIGH-PRECISION TELEMETRY &amp; BOTTLENECK ANALYZER</div>
         </div>
       </footer>
     </div>
