@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { runDiagnostics } from './controllers/diagnosticController.js';
+import { ssrfValidator } from './middleware/ssrfValidator.js';
 
 dotenv.config();
 
@@ -28,8 +29,8 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Diagnostic endpoint
-app.post('/api/diagnose', runDiagnostics);
+// Diagnostic endpoint protected by SSRF validation middleware
+app.post('/api/diagnose', ssrfValidator, runDiagnostics);
 
 app.listen(PORT, () => {
   console.log(`Diagnostic backend server running on http://localhost:${PORT}`);
