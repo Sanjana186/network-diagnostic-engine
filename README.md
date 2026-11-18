@@ -1,7 +1,6 @@
 # Network Diagnostic Engine
 
 > **React JS Course Project | 5th Semester Capstone**  
-> **Team Size:** 2 Engineers (Engineer 1 & Engineer 2)  
 > **Status:** Version 1 (Core Deliverable) & Version 2 (Stretch Goals) Complete  
 > **Test Coverage:** 322 Automated Unit Tests (100% Passing)
 
