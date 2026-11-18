@@ -87,17 +87,17 @@ export function CustomCursor() {
       {/* Precision Center Dot */}
       <div
         ref={dotRef}
-        className="fixed top-0 left-0 w-2 h-2 rounded-full bg-white pointer-events-none z-[9999] shadow-sm shadow-white/80"
+        className="fixed top-0 left-0 w-1.5 h-1.5 rounded-full bg-white pointer-events-none z-[9999] shadow-sm shadow-white/60"
         style={{ willChange: 'transform' }}
       />
 
-      {/* Smooth Trailing Glow Ring */}
+      {/* Subtle Compact Trailing Ring */}
       <div
         ref={ringRef}
         className={`fixed top-0 left-0 rounded-full pointer-events-none z-[9998] transition-all duration-150 ease-out border ${
           hovering
-            ? 'w-10 h-10 border-white/80 bg-white/10 shadow-lg shadow-white/20 scale-110'
-            : 'w-7 h-7 border-white/30 bg-transparent'
+            ? 'w-6 h-6 border-white/80 bg-white/10 shadow-md shadow-white/20'
+            : 'w-4 h-4 border-white/40 bg-transparent'
         }`}
         style={{ willChange: 'transform' }}
       />
