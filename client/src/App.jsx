@@ -17,6 +17,7 @@ import { WaterfallChart } from './features/diagnostics/WaterfallChart';
 import { useDiagnosticHistory } from './features/history/useDiagnosticHistory';
 import { HistoryPanel } from './features/history/HistoryPanel';
 import { HistoryComparison } from './features/history/HistoryComparison';
+import { CustomCursor } from './components/ui/CustomCursor';
 
 function App() {
   const [inputUrl, setInputUrl] = useState('https://example.com');
@@ -78,6 +79,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-[#07080c] text-slate-100 flex flex-col font-sans bg-tech-grid">
+      <CustomCursor />
       {/* Technical Header / Masthead */}
       <header className="border-b border-white/10 bg-[#07080c]/90 backdrop-blur sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
