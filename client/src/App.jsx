@@ -8,7 +8,8 @@ import {
   Server,
   History,
   GitCompare,
-  Layers
+  Layers,
+  Repeat
 } from 'lucide-react';
 import { useDiagnostic } from './features/diagnostics/hooks/useDiagnostic';
 import { UrlForm } from './features/diagnostics/UrlForm';
@@ -23,8 +24,12 @@ function App() {
   const [inputUrl, setInputUrl] = useState('https://example.com');
   const [activeTab, setActiveTab] = useState('probe'); // 'probe' | 'history' | 'compare'
   const [comparisonTargetId, setComparisonTargetId] = useState('');
+  
+  // V2 Feature: Repeated Testing (1 run vs 3-run average)
+  const [probeRuns, setProbeRuns] = useState(1);
+  const [selectedRunIndex, setSelectedRunIndex] = useState(-1); // -1 = Average; 0, 1, 2 = Individual Run
 
-  const { data, loading, error, run } = useDiagnostic();
+  const { data, loading, error, progress, run } = useDiagnostic();
   const { history, addRecord } = useDiagnosticHistory();
 
   const presets = [
@@ -44,8 +49,10 @@ function App() {
       setInputUrl(formatted);
     }
 
+    setSelectedRunIndex(-1); // Reset to average view on new test
+
     try {
-      const result = await run(formatted);
+      const result = await run(formatted, { runs: probeRuns });
       if (result) {
         addRecord(result);
       }
@@ -77,9 +84,15 @@ function App() {
     ? history.find((r) => r.id === comparisonTargetId)
     : (matchingHistoryRecords.length > 1 ? matchingHistoryRecords[1] : null);
 
+  // If user selected a specific individual run from a 3-run benchmark, display that run; otherwise display average
+  const displayedData = (data?.isMultiRun && selectedRunIndex >= 0 && data.runs?.[selectedRunIndex])
+    ? data.runs[selectedRunIndex]
+    : data;
+
   return (
     <div className="min-h-screen bg-[#07080c] text-slate-100 flex flex-col font-sans bg-tech-grid">
       <CustomCursor />
+      
       {/* Technical Header / Masthead */}
       <header className="border-b border-white/10 bg-[#07080c]/90 backdrop-blur sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
@@ -92,7 +105,7 @@ function App() {
                 NETWORK DIAGNOSTIC ENGINE
               </span>
               <span className="text-[10px] font-mono text-slate-400 hidden sm:inline">
-                // FULL_STACK_V1
+                // FULL_STACK_V2
               </span>
             </div>
           </div>
@@ -164,14 +177,58 @@ function App() {
         {/* TAB 1: LIVE PROBE */}
         {activeTab === 'probe' && (
           <div className="space-y-6">
-            {/* Engineer 2's UrlForm Component */}
+            {/* Input Box with Mode Switcher */}
             <div className="border border-white/10 bg-[#0d0f17] rounded-lg p-3 sm:p-4 shadow-2xl">
+              {/* V2 Repeated Testing Mode Toggle */}
+              <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-white/5 text-[11px] font-mono">
+                <span className="text-slate-400 flex items-center gap-1.5">
+                  <Repeat className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>PROBE MODE:</span>
+                </span>
+                <div className="flex items-center gap-1 bg-white/5 border border-white/10 p-0.5 rounded">
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={() => setProbeRuns(1)}
+                    className={`px-2.5 py-1 rounded transition-colors ${
+                      probeRuns === 1 
+                        ? 'bg-white text-black font-semibold' 
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    SINGLE PROBE
+                  </button>
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={() => setProbeRuns(3)}
+                    className={`px-2.5 py-1 rounded transition-colors flex items-center gap-1.5 ${
+                      probeRuns === 3 
+                        ? 'bg-cyan-400 text-black font-semibold' 
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <span>3-RUN AVERAGE</span>
+                    <span className="text-[9px] px-1 py-0.2 rounded bg-black/20 font-bold">V2</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* URL Form Component */}
               <UrlForm
                 value={inputUrl}
                 onChange={setInputUrl}
                 onSubmit={handleFormSubmit}
                 loading={loading}
               />
+
+              {/* Progress Indicator when running multi-run benchmark */}
+              {loading && progress && progress.total > 1 && (
+                <div className="mt-3 pt-2 border-t border-white/5 flex items-center gap-2 text-xs font-mono text-cyan-400 animate-pulse">
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  <span>EXECUTING PROBE RUN {progress.current} OF {progress.total}... FILTERING NETWORK JITTER</span>
+                </div>
+              )}
 
               {/* Quick Presets */}
               <div className="mt-3 pt-2.5 border-t border-white/5 flex flex-wrap items-center gap-2 text-[11px] font-mono text-slate-400">
@@ -201,27 +258,75 @@ function App() {
             )}
 
             {/* Live Diagnostics Results */}
-            {data && (
+            {displayedData && (
               <div className="space-y-6">
+                {/* Multi-Run Selector Strip (when test was run with 3 runs) */}
+                {data?.isMultiRun && (
+                  <div className="border border-cyan-500/30 bg-cyan-950/15 rounded-lg p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs font-mono">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+                      <span className="font-bold text-white uppercase">
+                        3-RUN JITTER BENCHMARK COMPLETED
+                      </span>
+                      <span className="text-slate-400 hidden md:inline">
+                        (Average filtered across 3 consecutive socket probes)
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 bg-black/40 border border-white/10 p-0.5 rounded">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedRunIndex(-1)}
+                        className={`px-2.5 py-1 rounded text-[11px] transition-colors ${
+                          selectedRunIndex === -1
+                            ? 'bg-cyan-400 text-black font-bold'
+                            : 'text-slate-300 hover:text-white'
+                        }`}
+                      >
+                        AVERAGE (x̄: {data.timings.totalDuration}ms)
+                      </button>
+                      {data.runs.map((r, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setSelectedRunIndex(idx)}
+                          className={`px-2 py-1 rounded text-[11px] transition-colors ${
+                            selectedRunIndex === idx
+                              ? 'bg-white text-black font-bold'
+                              : 'text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          RUN #{idx + 1} ({r.timings.totalDuration}ms)
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Hardware & Network Specification Strip */}
                 <div className="border border-white/10 bg-[#0d0f17] rounded-lg px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 text-[11px] font-mono">
                   <div className="flex items-center gap-2">
                     <span className="text-slate-400">ENDPOINT:</span>
-                    <span className="text-white font-bold">{data.target.url}</span>
+                    <span className="text-white font-bold">{displayedData.target.url}</span>
+                    {data?.isMultiRun && selectedRunIndex >= 0 && (
+                      <span className="px-1.5 py-0.5 rounded bg-white/10 text-white font-bold text-[10px]">
+                        INSPECTING RUN #{selectedRunIndex + 1}
+                      </span>
+                    )}
                   </div>
                   <div className="flex flex-wrap items-center gap-4 text-slate-400">
-                    <span>RESOLVED_IP: <strong className="text-slate-200">{data.target.ip}</strong></span>
-                    <span>PORT: <strong className="text-slate-200">{data.target.port}</strong></span>
-                    <span>SCHEME: <strong className="text-slate-200">{data.target.protocol.toUpperCase()}</strong></span>
-                    <span>HTTP_VER: <strong className="text-slate-200">{data.metrics.httpVersion || '1.1'}</strong></span>
+                    <span>RESOLVED_IP: <strong className="text-slate-200">{displayedData.target.ip}</strong></span>
+                    <span>PORT: <strong className="text-slate-200">{displayedData.target.port}</strong></span>
+                    <span>SCHEME: <strong className="text-slate-200">{displayedData.target.protocol.toUpperCase()}</strong></span>
+                    <span>HTTP_VER: <strong className="text-slate-200">{displayedData.metrics.httpVersion || '1.1'}</strong></span>
                   </div>
                 </div>
 
                 {/* Metric Cards */}
-                <MetricCards data={data} />
+                <MetricCards data={displayedData} />
 
                 {/* Waterfall Timeline */}
-                <WaterfallChart data={data} />
+                <WaterfallChart data={displayedData} />
               </div>
             )}
 
@@ -237,10 +342,10 @@ function App() {
                 </div>
 
                 <div className="border border-white/10 bg-[#0d0f17] rounded-lg p-5">
-                  <div className="text-[10px] font-mono text-slate-400 mb-2">02 // SEQUENTIAL OFFSETS</div>
-                  <h3 className="text-sm font-bold text-white mb-1">Waterfall Timeline</h3>
+                  <div className="text-[10px] font-mono text-slate-400 mb-2">02 // MULTI-RUN BENCHMARKING</div>
+                  <h3 className="text-sm font-bold text-white mb-1">Jitter &amp; Spikes Filtering</h3>
                   <p className="text-xs text-slate-400 leading-relaxed">
-                    Visualizes exact sequential phase offsets with in-bar labels and interactive microsecond inspection.
+                    Optionally execute 3 sequential runs to filter network anomalies and distinguish transient spikes from persistent delays.
                   </p>
                 </div>
 
@@ -297,7 +402,7 @@ function App() {
 
               {/* Render Engineer 2's HistoryComparison Component */}
               <HistoryComparison
-                currentResult={data}
+                currentResult={displayedData}
                 previousRecord={selectedComparisonRecord}
               />
             </div>
@@ -309,7 +414,7 @@ function App() {
       <footer className="border-t border-white/10 bg-[#07080c] py-4 text-[11px] font-mono text-slate-400">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <div>REACT JS CAPSTONE // NETWORK DIAGNOSTIC ENGINE</div>
-          <div className="text-slate-400">VERSION 1.0.0 // ENGINEER 1 &amp; 2 FULLY INTEGRATED</div>
+          <div className="text-slate-400">VERSION 2.0.0 // REPEATED TESTING &amp; JITTER FILTERING ACTIVE</div>
         </div>
       </footer>
     </div>
